@@ -34,7 +34,7 @@ function updateChart(fileIndex) {
     const audioBuffer = audioBuffers[fileIndex];
     analyzeAmplitude(audioBuffer); // Process audio data
     // Visualize the data in 'chartContainer' as we're now using a single container
-    const chart1 = new CanvasJS.Chart("chartContainer", {
+    const chart = new CanvasJS.Chart("chartContainer", {
         animationEnabled: true,
         zoomEnabled: true,
         title: {
@@ -42,7 +42,7 @@ function updateChart(fileIndex) {
         },
         data: data
     });
-    chart1.render();
+    chart.render();
 }
 
 // Event listener for the dropdown selection change
