@@ -1,14 +1,14 @@
 const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 const analyser = audioContext.createAnalyser();
 analyser.fftSize = 256;
-const chartContainer1 = document.getElementById('chartContainer1');
+const chartContainer = document.getElementById('chartContainer');
 
 const bufferLength = analyser.frequencyBinCount;
 let data = [];
 
 let x = 0;
 const selectedData = new Float32Array(bufferLength);
-const sliceWidth = chartContainer1 ? chartContainer1.clientWidth * 1.0 / bufferLength : 0; // Calculate sliceWidth if canvas exists
+const sliceWidth = chartContainer ? chartContainer.clientWidth * 1.0 / bufferLength : 0; // Calculate sliceWidth if canvas exists
 let audioBuffers = [];
 
 // Function to handle audio processing and visualization
@@ -33,8 +33,8 @@ function processAndVisualize(arrayBuffer, fileIndex) {
 function updateChart(fileIndex) {
     const audioBuffer = audioBuffers[fileIndex];
     analyzeAmplitude(audioBuffer); // Process audio data
-    // Visualize the data in 'chartContainer1' as we're now using a single container
-    const chart1 = new CanvasJS.Chart("chartContainer1", {
+    // Visualize the data in 'chartContainer' as we're now using a single container
+    const chart1 = new CanvasJS.Chart("chartContainer", {
         animationEnabled: true,
         zoomEnabled: true,
         title: {
