@@ -2,7 +2,6 @@ const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 const analyser = audioContext.createAnalyser();
 analyser.fftSize = 512;
 const chartContainer1 = document.getElementById('chartContainer1');
-const chartContainer2 = document.getElementById('chartContainer2');
 
 const bufferLength = analyser.frequencyBinCount;
 let data = [];
