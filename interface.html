@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Music File Upload</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <script type="text/javascript" src="https://cdn.canvasjs.com/canvasjs.min.js" defer></script>
+</head>
+
+<body>
+
+    <body onpageshow="refreshOnBack(event)"></body>
+    <div class="main-container">
+        <div class="file-upload-row">
+            <h1>Upload music file/files</h1>
+            <input type="file" id="fileInput" accept="audio/*" multiple />
+            <button id="showChartButton">Upload</button>
+            <div id="fileNames"></div>
+            <select id="fileSelector"></select>
+            <option value="0"></option>
+            </select>
+        </div>
+        <div id="chartContainer1" class="chart-container"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
