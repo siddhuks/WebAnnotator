@@ -87,8 +87,6 @@ document.getElementById('showChartButton').addEventListener('click', function() 
 });
 
 
-
-
 function analyzeAmplitude(audioBuffer) {
     x = 0;
     data = [];
