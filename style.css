@@ -46,6 +46,26 @@ html {
     /* Darker shade of green on hover */
 }
 
+
+/* #container {
+    position: relative;
+    width: 400px;
+    height: 300px;
+    border: 1px solid #000;
+} */
+
+#verticalLine {
+    position: absolute;
+    left: 150px;
+    /* Initial position */
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    /* Line width */
+    background-color: #000;
+    cursor: ew-resize;
+}
+
 .main-container {
     display: flex;
     flex-direction: column;

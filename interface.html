@@ -5,6 +5,16 @@
     <title>Music File Upload</title>
     <link rel="stylesheet" type="text/css" href="style.css">
     <script type="text/javascript" src="https://cdn.canvasjs.com/canvasjs.min.js" defer></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/0.7.7/chartjs-plugin-zoom.min.js" defer></script>
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@latest" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.3/dist/chartjs-plugin-dragdata.min.js" defer></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" defer></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js" defer></script>
+
+
 </head>
 
 <body>
@@ -19,8 +29,9 @@
             <select id="fileSelector"></select>
             <option value="0"></option>
             </select>
+            <button id="reset">Reset Zoom</button>
         </div>
-        <div id="chartContainer" class="chart-container"></div>
+        <canvas id="chartContainer" class="chart-container"></canvas>
     </div>
 
     <script src="script.js"></script>
