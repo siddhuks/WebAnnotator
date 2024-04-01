@@ -1,12 +1,18 @@
 const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 const analyser = audioContext.createAnalyser();
-analyser.fftSize = 512;
+analyser.fftSize = 256;
 const chartContainer = document.getElementById('chartContainer');
 const canvas = chartContainer;
 const ctx = document.getElementById('chartContainer').getContext('2d');
 const bufferLength = analyser.frequencyBinCount;
 let data = [];
 let myChart;
+let arr1 = [];
+let filterArr = [];
+let files = [];
+let isCSV = false;
+let xArray = []
+let yArray = []
 
 let x = 0;
 const selectedData = new Float32Array(bufferLength);
@@ -19,7 +25,7 @@ function processAndVisualize(arrayBuffer, fileIndex) {
 
     audioContext.decodeAudioData(arrayBuffer)
         .then(audioBuffer => {
-            //analyzeAmplitude(audioBuffer);
+            analyzeAmplitude(audioBuffer);
             audioBuffers[fileIndex] = audioBuffer;
             if (fileIndex === 0) { // Automatically visualize the first file
                 updateChart(fileIndex);
@@ -31,26 +37,130 @@ function processAndVisualize(arrayBuffer, fileIndex) {
         });
 }
 
-document.getElementById('reset').addEventListener('click', function() {
-    myChart.resetZoom();
-});
+// Function to process CSV file and update chart
+function processCsvFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        const [xArr, yArr, arr] = parseCsvContent(content); // Implement this function based on your CSV format
+        // Use xArray and yArray to update the chart data
+        dataPoints = xArr.map((x, index) => ({ x, y: yArr[index] }));
+        console.log("psf dataPoints", dataPoints)
+        console.log("psf arr", arr)
+        xArray = xArr
+        yArray = yArr
+        arr1 = arr
+        console.log("psf arr1", arr1)
+            // if (index == 0) {
+            //     updateChart(index);
+            // }
+            // Optionally use arr1 to position vertical lines
+        isCSV = true;
+        initializeChart(); // You may need to adjust this function to accept data
+    };
+    reader.readAsText(file);
+}
+
+// Example CSV parsing function (simplified and needs to be adapted)
+function parseCsvContent(content) {
+    let lines = content.split('\n').filter(line => line);
+    // Assuming CSV format: xValue,yValue
+    let xArray = [],
+        yArray = [],
+        arr1 = []; // Example arrays
+    for (let i = 1; i < lines.length; i++) { // Starting from 1 to skip header
+        let [x, y, arrValue] = lines[i].split(',').map(Number);
+        xArray.push(x);
+        yArray.push(y);
+        arr1.push(arrValue || null); // Assuming third column for vertical lines (optional)
+    }
+    console.log("psv: ", xArray, yArray, arr1)
+    return [xArray, yArray, arr1];
+}
 
 
-// Function to update the chart based on the selected file
-// Assuming the rest of your script remains unchanged
+function saveArraysAsCsv(xArray, yArray, arr1) {
+    // Start with the column headers
+    let csvContent = "xArray,yArray,arr1\n";
 
-// let verticalLinesPositions = []; // Example positions for vertical lines
+    // Determine the longest array
+    const maxLength = Math.max(xArray.length, yArray.length, filterArr.length);
+    for (let i = 0; i < maxLength; i++) {
+        const xValue = xArray[i] || '';
+        const yValue = yArray[i] || '';
+        const arr1Value = filterArr[i] || '';
+        csvContent += `${xValue},${yValue},${arr1Value}\n`; // Append row data
+    }
 
-// function createVerticalLineDataset(xPosition) {
-//     return {
-//         label: '',
-//         data: [{ x: xPosition, y: -1 }, { x: xPosition, y: 1 }],
-//         borderColor: 'rgb(255, 99, 132)', // Use different colors if needed
-//         borderWidth: 2,
-//         pointRadius: 0,
-//         dragData: true, // Enable dragging if you want the lines to be draggable
-//     };
-// }
+    // Create a Blob with the CSV content
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "data.csv"); // Specify the file name
+    document.body.appendChild(link); // Required for FF
+    link.click(); // Trigger the download
+    document.body.removeChild(link); // Clean up
+}
+
+function analyzeAmplitude(audioBuffer) {
+    x = 0;
+    data = [];
+    dataPoints = [];
+    yArray = []
+    xArray = []
+    const audioLength = audioBuffer.length;
+    var interval = audioLength / bufferLength;
+    let y = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+        const sampleIndex = Math.floor(i * interval);
+        const channelData = audioBuffer.getChannelData(1);
+
+        if (sampleIndex >= 0 && sampleIndex < channelData.length) {
+            const sampleValue = channelData[sampleIndex];
+            selectedData[i] = sampleValue;
+        }
+        y = selectedData[i];
+
+        x += sliceWidth;
+        console.log("1c", x, y)
+
+        xArray.push(x)
+        yArray.push(y)
+
+        dataPoints.push({
+            x: x,
+            y: y
+        });
+        console.log("1d", xArray, yArray)
+    }
+
+    var dataSeries = {
+        type: "spline"
+    };
+
+    dataSeries.dataPoints = dataPoints;
+    data.push(dataSeries);
+}
+
+function updateChart(fileIndex) {
+    const file = files[fileIndex]; // Assuming 'files' is accessible and contains the uploaded files
+    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        // Handle CSV file processing
+        processCsvFile(file);
+    } else {
+        // Assuming it's an audio file if not CSV
+        const audioBuffer = audioBuffers[fileIndex];
+        console.log("audioBuffers: ", audioBuffer)
+        if (audioBuffer) {
+            analyzeAmplitude(audioBuffer);
+            initializeChart(); // Make sure audioBuffer is defined
+        } else {
+            console.error('No audio data available for analysis');
+        }
+    }
+}
 
 function getRandomSubarray(arr, size) {
     let shuffled = arr.slice(0),
@@ -65,19 +175,21 @@ function getRandomSubarray(arr, size) {
     return shuffled.slice(0, size);
 }
 
-// Use the function to get 10 random values from xArray
-
-
-// arr now contains 10 random values from xArray
-
-
 function initializeChart() {
-    let arr = [100, 200, 300, 400, 500]
-        // Dynamically generate annotations from xArray
-    let arr1 = getRandomSubarray(xArray, 10);
-    console.log('getRandomSubarray: ', arr1);
-    const annotations = arr1.map((xValue) => {
-        console.log('xArray, xValue: ', arr1, xValue)
+    filterArr = arr1;
+    console.log("IC:, isCSV ", arr1, isCSV);
+    filterArr = filterArr.filter(value => value !== null);
+    if (!isCSV) {
+
+        filterArr = getRandomSubarray(xArray, 10);
+    }
+
+    filterArr.sort((a, b) => a - b);
+    console.log('getRandomSubarray: ', filterArr);
+
+    const annotations = filterArr.map((xValue) => {
+        console.log('filterArr, xValue: ', filterArr, xValue)
+        console.log('dataPoints: ', dataPoints)
         return {
             type: 'line',
             mode: 'vertical',
@@ -91,6 +203,10 @@ function initializeChart() {
     });
 
     console.log("annotations: ", annotations)
+
+    if (myChart) {
+        myChart.destroy();
+    }
 
     myChart = new Chart(ctx, {
         type: 'line',
@@ -155,24 +271,27 @@ function initializeChart() {
                     // Enables zooming
                     zoom: {
                         enabled: true, // Enables zooming. This option is actually not necessary since enabling wheel is enough.
-                        mode: 'xy', // Zoom both the x and y axes
-                        // drag: false, // Disables drag-to-zoom behavior
+                        mode: 'x', // Zoom both the x and y axes
+                        drag: false, // Disables drag-to-zoom behavior
                         wheel: {
                             enabled: true, // Enables zooming using the mouse wheel
                         },
-                        pinch: {
-                            enabled: true // Enables zooming using pinch gestures on touch devices
-                        }
+                        // pinch: {
+                        //     enabled: true // Enables zooming using pinch gestures on touch devices
+                        // }
                     },
                     // Enables panning
-                    pan: {
-                        enabled: true, // Enables panning
-                        mode: 'xy' // Pans both the x and y axes
-                    }
+                    // pan: {
+                    //     enabled: true, // Enables panning
+                    //     mode: 'xy' // Pans both the x and y axes
+                    // }
                 }
             }
         }
     });
+
+    setUpEventListeners();
+    isCSV = false;
 }
 
 
@@ -198,8 +317,10 @@ function getClosestLineIndex(myChart, mouseX) {
     let closestDistance = Infinity;
 
     myChart.options.annotation.annotations.forEach((annotation, index) => {
+
         if (annotation.type === "line" && annotation.mode === "vertical") {
             const distance = Math.abs(xAxis.getPixelForValue(annotation.value) - mouseX);
+            console.log("index: ", index, " annotation.value: ", annotation.value)
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestIndex = index;
@@ -225,8 +346,14 @@ function setUpEventListeners() {
             const xValue = getXValue(myChart, event);
             // Update the position of the line being dragged
             myChart.options.annotation.annotations[dragLineIndex].value = xValue;
-            console.log("mv", event.offsetX)
+            console.log("mv", event.offsetX, " dragLineIndex: ", dragLineIndex, "xValue:", xValue)
+            console.log("mvb filterArr ", filterArr)
+            filterArr[dragLineIndex] = xValue;
+            console.log("mva filterArr ", filterArr)
             myChart.update();
+        } else {
+            // Prevent unnecessary chart updates or data modifications
+            return;
         }
     });
 
@@ -241,36 +368,6 @@ function setUpEventListeners() {
     });
 }
 
-
-function updateChart(fileIndex) {
-    const audioBuffer = audioBuffers[fileIndex];
-    analyzeAmplitude(audioBuffer); // Ensure this updates `data` correctly
-
-    initializeChart();
-    // if (window.myChart instanceof Chart) {
-    //     window.myChart.destroy(); // Destroy the previous instance if exists
-    // }
-
-    // Define initial position for the vertical line (for example, middle of the chart)
-    // const verticalLineX = Math.max(...dataPoints.map(dp => dp.x)) / 2;
-    setUpEventListeners();
-}
-
-// document.addEventListener("DOMContentLoaded", function() {
-//     // Your chart initialization code here
-//     if (typeof Chart !== 'undefined') {
-//         initializeChart();
-//     } else {
-//         console.error('Chart.js not loaded');
-//     }
-// });
-
-// function initializeChart() {
-//     // Initialization code for your chart
-// }
-
-
-
 // Event listener for the dropdown selection change
 document.getElementById('fileSelector').addEventListener('change', function() {
     const selectedFileIndex = parseInt(this.value, 10);
@@ -284,7 +381,7 @@ if (performance.navigation.type === performance.navigation.TYPE_BACK_FORWARD) {
 
 
 document.getElementById('fileInput').addEventListener('change', function() {
-    const files = this.files; // Access the selected files
+    files = this.files; // Update the global `files` variable with the newly selected files
     const fileSelector = document.getElementById('fileSelector');
     fileSelector.innerHTML = ''; // Clear existing options
 
@@ -303,110 +400,25 @@ document.getElementById('showChartButton').addEventListener('click', function() 
 
     if (files.length > 0) {
         for (let i = 0; i < files.length; i++) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                processAndVisualize(e.target.result, i); // Process each file
-            };
-            reader.readAsArrayBuffer(files[i]);
+            // Check if the file is a CSV
+            if (files[i].type === 'text/csv' || files[i].name.endsWith('.csv')) {
+                processCsvFile(files[i]);
+            } else {
+                // Process as audio file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    processAndVisualize(e.target.result, i); // Process each audio file
+                };
+                reader.readAsArrayBuffer(files[i]);
+            }
         }
     }
 });
 
-var xArray = []
-var yArray = []
+document.getElementById('reset').addEventListener('click', function() {
+    myChart.resetZoom();
+});
 
-function analyzeAmplitude(audioBuffer) {
-    x = 0;
-    data = [];
-    dataPoints = [];
-    yArray = []
-    xArray = []
-    const audioLength = audioBuffer.length;
-    var interval = audioLength / bufferLength;
-    let y = 0;
-
-    for (let i = 0; i < bufferLength; i++) {
-        const sampleIndex = Math.floor(i * interval);
-        const channelData = audioBuffer.getChannelData(1);
-
-        if (sampleIndex >= 0 && sampleIndex < channelData.length) {
-            const sampleValue = channelData[sampleIndex];
-            selectedData[i] = sampleValue;
-        }
-        y = selectedData[i];
-
-        x += sliceWidth;
-        console.log("1c", x, y)
-
-        xArray.push(x)
-        yArray.push(y)
-
-        dataPoints.push({
-            x: x,
-            y: y
-        });
-        console.log("1d", xArray, yArray)
-    }
-
-    var dataSeries = {
-        type: "spline"
-    };
-
-    dataSeries.dataPoints = dataPoints;
-    data.push(dataSeries);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// plugins: {
-//     // dragData: {
-//     //     round: 1,
-//     //     dragX: true,
-//     //     dragY: true,
-//     //     onDragstart: (event) => {
-//     //         console.log(event)
-//     //     },
-//     //     onDrag: function(e, datasetIndex, index, value) {
-//     //         console.log("OnDrag", window.myChart.data.datasets[0])
-//     //         console.log("OnDrag1", window.myChart.data.datasets[1])
-//     //         console.log("Dragging", datasetIndex, index, value);
-//     //         if (index === 1) { // Check if the dragged dataset is the vertical line
-//     //             console.log("Dragging222222", datasetIndex, index, value);
-//     //             window.myChart.data.datasets[1].data[0].x = value.x; // Adjust both points to keep the line vertical
-//     //             window.myChart.data.datasets[1].data[1].x = value.x;
-//     //             window.myChart.update();
-//     //         }
-//     //     },
-//     //     onDragEnd: function(e, datasetIndex, index, value) {
-//     //         console.log('Drag End', value);
-//     //     },
-//     // },
-
-
-//     zoom: {
-//         zoom: {
-//             wheel: {
-//                 enabled: true,
-//             },
-//             pinch: {
-//                 enabled: true,
-//             },
-//             mode: 'xy',
-//         },
-//         pan: {
-//             enabled: true,
-//             mode: 'xy',
-//         },
-//     }
-// }
+document.getElementById('saveCsvButton').addEventListener('click', function() {
+    saveArraysAsCsv(xArray, yArray, filterArr);
+});

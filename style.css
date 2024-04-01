@@ -14,7 +14,9 @@ html {
     /* Light grey background for slight contrast */
 }
 
-#showChartButton {
+#showChartButton,
+#reset,
+#saveCsvButton {
     background-color: #ccc;
     /* Green background */
     border: none;

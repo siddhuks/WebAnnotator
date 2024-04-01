@@ -23,13 +23,14 @@
     <div class="main-container">
         <div class="file-upload-row">
             <h1>Upload music file/files</h1>
-            <input type="file" id="fileInput" accept="audio/*" multiple />
+            <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
             <button id="showChartButton">Upload</button>
             <div id="fileNames"></div>
             <select id="fileSelector"></select>
             <option value="0"></option>
             </select>
             <button id="reset">Reset Zoom</button>
+            <button id="saveCsvButton">Save CSV</button>
         </div>
         <canvas id="chartContainer" class="chart-container"></canvas>
     </div>
