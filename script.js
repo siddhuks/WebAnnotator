@@ -4,6 +4,7 @@ analyser.fftSize = 256;
 const chartContainer = document.getElementById('chartContainer');
 const canvas = chartContainer;
 const ctx = document.getElementById('chartContainer').getContext('2d');
+const p5SketchContainer = document.getElementById('p5SketchContainer');
 const bufferLength = analyser.frequencyBinCount;
 let data = [];
 let myChart;
@@ -13,12 +14,53 @@ let files = [];
 let isCSV = false;
 let xArray = []
 let yArray = []
+let onsets;
 
 let x = 0;
 const selectedData = new Float32Array(bufferLength);
 const sliceWidth = chartContainer ? chartContainer.clientWidth * 1.0 / bufferLength : 0; // Calculate sliceWidth if canvas exists
 let audioBuffers = [];
 let dataPoints = [];
+
+
+document.getElementById('addAnnotationButton').addEventListener('click', function() {
+    const xValue = parseFloat(document.getElementById('annotationXValue').value);
+    addAnnotation(xValue);
+});
+
+function addAnnotation(xValue) {
+    if (myChart && !isNaN(xValue)) {
+        const annotation = {
+            type: 'line',
+            mode: 'vertical',
+            scaleID: 'x-axis-0',
+            value: xValue,
+            borderColor: 'blue', // Different color to distinguish new annotations
+            borderWidth: 2,
+        };
+        myChart.options.annotation.annotations.push(annotation);
+        filterArr.push(xValue); // Update filterArr with the new annotation value
+        myChart.update();
+    } else {
+        console.warn('Invalid x value for annotation:', xValue);
+    }
+}
+
+
+// Add these variables at the top of the script
+let audioElement = document.getElementById('audioPlayer');
+let currentAudioBuffer = null;
+let sourceNode = null;
+
+function initializeAudioPlayer(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        audioElement.src = e.target.result;
+        audioElement.style.display = 'block';
+    };
+    reader.readAsDataURL(file); // Read the file as a Data URL for the audio element
+}
+
 
 // Function to handle audio processing and visualization
 function processAndVisualize(arrayBuffer, fileIndex) {
@@ -31,11 +73,103 @@ function processAndVisualize(arrayBuffer, fileIndex) {
                 updateChart(fileIndex);
             }
 
+            if (document.getElementById('showSpectrogram').checked) {
+                p5SketchContainer.style.display = 'block';
+                console.log(".......................................")
+                displayPrecomputedSpectrogram(fileIndex);
+
+            }
+
         })
         .catch(error => {
             console.error('Error decoding audio:', error);
         });
 }
+
+// Add event listeners to the audio player for play, pause, and seek actions
+audioElement.addEventListener('play', () => {
+    if (sourceNode) {
+        sourceNode.start(0, audioElement.currentTime);
+    }
+});
+
+audioElement.addEventListener('pause', () => {
+    if (sourceNode) {
+        sourceNode.stop();
+    }
+});
+
+audioElement.addEventListener('seeked', () => {
+    if (sourceNode) {
+        sourceNode.stop();
+        sourceNode = audioContext.createBufferSource();
+        sourceNode.buffer = currentAudioBuffer;
+        sourceNode.connect(audioContext.destination);
+        sourceNode.start(0, audioElement.currentTime);
+    }
+});
+
+
+// Function to display the precomputed spectrogram
+async function displayPrecomputedSpectrogram(fileIndex) {
+    p5SketchContainer.innerHTML = ''; // Clear previous content if any
+    try {
+        const generatedFileName = await generateAndSaveSpectrogram(fileIndex);
+        const spectrogramImage = new Image();
+        const filePath = `http://127.0.0.1:9000/${generatedFileName}`;
+        console.log('Attempting to load spectrogram image from:', filePath);
+        spectrogramImage.src = filePath;
+        spectrogramImage.onload = function() {
+            p5SketchContainer.innerHTML = ''; // Clear previous content if any
+            p5SketchContainer.appendChild(spectrogramImage);
+        };
+        spectrogramImage.onerror = function() {
+            console.error('Error loading spectrogram image:', spectrogramImage.src);
+            p5SketchContainer.innerHTML = `<p>Could not load spectrogram image at ${spectrogramImage.src}.</p>`;
+        };
+    } catch (error) {
+        console.error('Error in generating or displaying spectrogram:', error);
+    }
+}
+
+
+async function generateAndSaveSpectrogram(fileIndex) {
+    const formData = new FormData();
+    console.log(files)
+    formData.append('audio', files[fileIndex]);
+
+    try {
+        const response = await fetch('http://127.0.0.1:9000/generate-spectrogram', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+        console.log("data: ", data)
+        if (data.success) {
+            return data.image_path.split('/').pop(); // Return the file name from the path
+        } else {
+            console.error('Error generating spectrogram:', data.message);
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+}
+
+document.getElementById('showSpectrogram').addEventListener('change', function() {
+    if (this.checked) {
+        p5SketchContainer.style.display = 'block';
+        if (audioBuffers.length > 0) {
+            // const fileName = files[0].name.replace(/\.[^/.]+$/, ".png");
+            // console.log("showSpectrogram: ", fileName)
+            displayPrecomputedSpectrogram(0);
+        }
+    } else {
+        p5SketchContainer.style.display = 'none';
+    }
+});
+
 
 // Function to process CSV file and update chart
 function processCsvFile(file) {
@@ -45,18 +179,18 @@ function processCsvFile(file) {
         const [xArr, yArr, arr] = parseCsvContent(content); // Implement this function based on your CSV format
         // Use xArray and yArray to update the chart data
         dataPoints = xArr.map((x, index) => ({ x, y: yArr[index] }));
-        console.log("psf dataPoints", dataPoints)
-        console.log("psf arr", arr)
+        //console.log("psf dataPoints", dataPoints)
+        //console.log("psf arr", arr)
         xArray = xArr
         yArray = yArr
         arr1 = arr
-        console.log("psf arr1", arr1)
+            //console.log("psf arr1", arr1)
             // if (index == 0) {
             //     updateChart(index);
             // }
             // Optionally use arr1 to position vertical lines
         isCSV = true;
-        initializeChart(); // You may need to adjust this function to accept data
+        initializeChart(file); // You may need to adjust this function to accept data
     };
     reader.readAsText(file);
 }
@@ -74,14 +208,14 @@ function parseCsvContent(content) {
         yArray.push(y);
         arr1.push(arrValue || null); // Assuming third column for vertical lines (optional)
     }
-    console.log("psv: ", xArray, yArray, arr1)
+    //console.log("psv: ", xArray, yArray, arr1)
     return [xArray, yArray, arr1];
 }
 
 
 function saveArraysAsCsv(xArray, yArray, arr1) {
     // Start with the column headers
-    let csvContent = "xArray,yArray,arr1\n";
+    let csvContent = "X,Y,onset/offset\n";
 
     // Determine the longest array
     const maxLength = Math.max(xArray.length, yArray.length, filterArr.length);
@@ -97,7 +231,7 @@ function saveArraysAsCsv(xArray, yArray, arr1) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "data.csv"); // Specify the file name
+    link.setAttribute("download", "audio_data.csv"); // Specify the file name
     document.body.appendChild(link); // Required for FF
     link.click(); // Trigger the download
     document.body.removeChild(link); // Clean up
@@ -110,12 +244,17 @@ function analyzeAmplitude(audioBuffer) {
     yArray = []
     xArray = []
     const audioLength = audioBuffer.length;
-    var interval = audioLength / bufferLength;
+    console.log("audioLength: ", audioLength, "buf len: ", bufferLength)
+    console.log("audioBuffer.duration: ", audioBuffer.duration)
+        // var interval = audioLength / bufferLength;
+    let interval = audioBuffer.duration / bufferLength
+    console.log("interval: ", interval, "2: ", audioBuffer.duration / bufferLength)
     let y = 0;
 
     for (let i = 0; i < bufferLength; i++) {
-        const sampleIndex = Math.floor(i * interval);
-        const channelData = audioBuffer.getChannelData(1);
+        // const sampleIndex = Math.floor(i * interval);
+        const sampleIndex = Math.floor(i * (audioBuffer.length / bufferLength));
+        const channelData = audioBuffer.getChannelData(0);
 
         if (sampleIndex >= 0 && sampleIndex < channelData.length) {
             const sampleValue = channelData[sampleIndex];
@@ -124,6 +263,7 @@ function analyzeAmplitude(audioBuffer) {
         y = selectedData[i];
 
         x += sliceWidth;
+        x = i * interval;
         console.log("1c", x, y)
 
         xArray.push(x)
@@ -133,7 +273,7 @@ function analyzeAmplitude(audioBuffer) {
             x: x,
             y: y
         });
-        console.log("1d", xArray, yArray)
+        //console.log("1d", xArray, yArray)
     }
 
     var dataSeries = {
@@ -152,10 +292,15 @@ function updateChart(fileIndex) {
     } else {
         // Assuming it's an audio file if not CSV
         const audioBuffer = audioBuffers[fileIndex];
-        console.log("audioBuffers: ", audioBuffer)
+        //console.log("audioBuffers: ", audioBuffer)
         if (audioBuffer) {
             analyzeAmplitude(audioBuffer);
-            initializeChart(); // Make sure audioBuffer is defined
+            initializeChart(file); // Make sure audioBuffer is defined
+            // if (document.getElementById('showSpectrogram').checked) {
+            //     // generateSpectrogram(audioBuffer);
+            //     displayPrecomputedSpectrogram(files[0].name.replace(/\.[^/.]+$/, ".png"));
+
+            // }
         } else {
             console.error('No audio data available for analysis');
         }
@@ -175,21 +320,41 @@ function getRandomSubarray(arr, size) {
     return shuffled.slice(0, size);
 }
 
-function initializeChart() {
+async function initializeChart(file) {
     filterArr = arr1;
-    console.log("IC:, isCSV ", arr1, isCSV);
+    //console.log("IC:, isCSV ", arr1, isCSV);
     filterArr = filterArr.filter(value => value !== null);
     if (!isCSV) {
 
         filterArr = getRandomSubarray(xArray, 10);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('description', 'best'); // Assuming you want to include this based on your Python code
+        try {
+            // Fetch API to send the file to your backend
+            const response = await fetch('http://127.0.0.1:8000/process-audio/', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+
+            // Display the audio duration in the UI
+            // Assuming you have an element with the ID 'audioLength' to display the duration
+            //document.getElementById('audioLength').textContent = `Duration: ${result.duration} seconds`;
+            onsets = result.notes.onsets;
+            console.log("api call: ", result.notes.onsets)
+
+        } catch (error) {
+            console.error('Error uploading file:', error);
+        }
     }
 
-    filterArr.sort((a, b) => a - b);
-    console.log('getRandomSubarray: ', filterArr);
-
+    // filterArr.sort((a, b) => a - b);
+    //console.log('getRandomSubarray: ', filterArr);
+    filterArr = onsets; // Comment this along with api call to get random arrays
     const annotations = filterArr.map((xValue) => {
-        console.log('filterArr, xValue: ', filterArr, xValue)
-        console.log('dataPoints: ', dataPoints)
+        //console.log('filterArr, xValue: ', filterArr, xValue)
+        //console.log('dataPoints: ', dataPoints)
         return {
             type: 'line',
             mode: 'vertical',
@@ -202,7 +367,7 @@ function initializeChart() {
         };
     });
 
-    console.log("annotations: ", annotations)
+    //console.log("annotations: ", annotations)
 
     if (myChart) {
         myChart.destroy();
@@ -240,19 +405,6 @@ function initializeChart() {
                         // Other options here
                     }
                 }],
-
-                // xAxes: [{
-                // type: 'linear', // Use a linear scale for the x-axis
-                // position: 'bottom',
-                //     gridLines: {
-                //         drawOnChartArea: false
-                //     }
-                // }],
-                // yAxes: [{
-                //     gridLines: {
-                //         drawOnChartArea: false
-                //     }
-                // }]
             },
             animation: {
                 duration: 200,
@@ -302,17 +454,17 @@ let dragLineIndex = null; // Index of the line being dragged
 function getXValue(myChart, event) {
     const xAxis = myChart.scales['x-axis-0'];
     const pixelValue = event.offsetX;
-    console.log("pixelValue", pixelValue)
-    console.log("event", event)
+    //console.log("pixelValue", pixelValue)
+    //console.log("event", event)
     const xValue = xAxis.getValueForPixel(pixelValue);
-    console.log("Xvalue", xValue)
-        // Return the precise value instead of rounding
+    //console.log("Xvalue", xValue)
+    // Return the precise value instead of rounding
     return xValue;
 }
 
 function getClosestLineIndex(myChart, mouseX) {
     const xAxis = myChart.scales['x-axis-0'];
-    console.log("xAxis", xAxis)
+    //console.log("xAxis", xAxis)
     let closestIndex = -1;
     let closestDistance = Infinity;
 
@@ -320,7 +472,7 @@ function getClosestLineIndex(myChart, mouseX) {
 
         if (annotation.type === "line" && annotation.mode === "vertical") {
             const distance = Math.abs(xAxis.getPixelForValue(annotation.value) - mouseX);
-            console.log("index: ", index, " annotation.value: ", annotation.value)
+            //console.log("index: ", index, " annotation.value: ", annotation.value)
             if (distance < closestDistance) {
                 closestDistance = distance;
                 closestIndex = index;
@@ -331,14 +483,82 @@ function getClosestLineIndex(myChart, mouseX) {
     return closestIndex;
 }
 
+// Function to delete the closest annotation based on mouse position
+// function deleteClosestAnnotation(myChart, event) {
+//     const xAxis = myChart.scales['x-axis-0'];
+//     const mouseX = event.offsetX;
+//     const mouseXValue = xAxis.getValueForPixel(mouseX);
+
+//     let closestIndex = -1;
+//     let closestDistance = Infinity;
+
+//     myChart.options.annotation.annotations.forEach((annotation, index) => {
+//         if (annotation.type === "line" && annotation.mode === "vertical") {
+//             const distance = Math.abs(annotation.value - mouseXValue);
+//             if (distance < closestDistance) {
+//                 closestDistance = distance;
+//                 closestIndex = index;
+//             }
+//         }
+//     });
+
+//     if (closestIndex !== -1) {
+//         // Remove the annotation and update filterArr
+//         myChart.options.annotation.annotations.splice(closestIndex, 1);
+//         filterArr.splice(closestIndex, 1);
+//         myChart.update();
+//         console.log('Removed annotation at index:', closestIndex);
+//     }
+// }
+
+
+function deleteClosestAnnotation(myChart, event) {
+    const xAxis = myChart.scales['x-axis-0'];
+    const mouseX = event.offsetX;
+    const mouseXValue = xAxis.getValueForPixel(mouseX);
+
+    let closestIndex = -1;
+    let closestDistance = Infinity;
+
+    myChart.options.annotation.annotations.forEach((annotation, index) => {
+        if (annotation.type === "line" && annotation.mode === "vertical") {
+            const distance = Math.abs(annotation.value - mouseXValue);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+            }
+        }
+    });
+
+    if (closestIndex !== -1) {
+        // Remove the annotation and update filterArr
+        myChart.options.annotation.annotations.splice(closestIndex, 1);
+        filterArr.splice(closestIndex, 1); // Ensure the corresponding entry in filterArr is removed
+        myChart.update();
+        //console.log('Removed annotation at index:', closestIndex);
+    }
+}
+
+
+
 function setUpEventListeners() {
+
+    const showSpectrogramCheckbox = document.getElementById('showSpectrogram');
+    showSpectrogramCheckbox.addEventListener('change', () => {
+        if (showSpectrogramCheckbox.checked) {
+            p5SketchContainer.style.display = 'block';
+        } else {
+            p5SketchContainer.style.display = 'none';
+        }
+    });
+
     // Set up the event listeners on the canvas
     canvas.addEventListener('mousedown', (event) => {
 
         isDragging = true;
         // Determine which line is closer to the drag start point
         dragLineIndex = getClosestLineIndex(myChart, event.offsetX);
-        console.log("md", dragLineIndex)
+        //console.log("md", dragLineIndex)
     });
 
     canvas.addEventListener('mousemove', (event) => {
@@ -346,10 +566,10 @@ function setUpEventListeners() {
             const xValue = getXValue(myChart, event);
             // Update the position of the line being dragged
             myChart.options.annotation.annotations[dragLineIndex].value = xValue;
-            console.log("mv", event.offsetX, " dragLineIndex: ", dragLineIndex, "xValue:", xValue)
-            console.log("mvb filterArr ", filterArr)
+            //console.log("mv", event.offsetX, " dragLineIndex: ", dragLineIndex, "xValue:", xValue)
+            //console.log("mvb filterArr ", filterArr)
             filterArr[dragLineIndex] = xValue;
-            console.log("mva filterArr ", filterArr)
+            //console.log("mva filterArr ", filterArr)
             myChart.update();
         } else {
             // Prevent unnecessary chart updates or data modifications
@@ -362,16 +582,34 @@ function setUpEventListeners() {
         dragLineIndex = null;
     });
 
-    canvas.addEventListener('mouseleave', () => {
-        isDragging = false;
-        dragLineIndex = null;
+    canvas.addEventListener('dblclick', (event) => {
+        const deleteToggle = document.getElementById('deleteToggle').checked;
+        if (deleteToggle) {
+            deleteClosestAnnotation(myChart, event);
+        }
     });
+
+    // canvas.addEventListener('mouseleave', () => {
+    //     isDragging = false;
+    //     dragLineIndex = null;
+    // });
 }
 
 // Event listener for the dropdown selection change
 document.getElementById('fileSelector').addEventListener('change', function() {
     const selectedFileIndex = parseInt(this.value, 10);
+    if (files[selectedFileIndex].type.startsWith('audio/')) {
+        clearCurrentAudio();
+        initializeAudioPlayer(files[selectedFileIndex]);
+    }
     updateChart(selectedFileIndex);
+
+    // Generate and display the spectrogram for the selected file
+    if (document.getElementById('showSpectrogram').checked) {
+        // const fileName = files[selectedFileIndex].name.replace(/\.[^/.]+$/, ".png");
+        // console.log("fileSelector: ", fileName)
+        displayPrecomputedSpectrogram(selectedFileIndex);
+    }
 });
 
 
@@ -390,8 +628,23 @@ document.getElementById('fileInput').addEventListener('change', function() {
         option.value = i;
         option.textContent = `File ${i + 1}: ${files[i].name}`; // Custom label with file name
         fileSelector.appendChild(option);
+
+        // Initialize audio player if the file is an audio file
+        if (files.length > 0 && files[0].type.startsWith('audio/')) {
+            clearCurrentAudio();
+            initializeAudioPlayer(files[0]);
+        }
     }
 });
+
+function clearCurrentAudio() {
+    if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode = null;
+    }
+    audioElement.pause();
+    audioElement.src = '';
+}
 
 
 // Handle the 'showChartButton' click separately
@@ -422,3 +675,30 @@ document.getElementById('reset').addEventListener('click', function() {
 document.getElementById('saveCsvButton').addEventListener('click', function() {
     saveArraysAsCsv(xArray, yArray, filterArr);
 });
+
+document.getElementById('deleteAnnotationButton').addEventListener('click', function() {
+    const annotationId = document.getElementById('annotationIdInput').value;
+    deleteAnnotation(annotationId);
+});
+
+function deleteAnnotation(annotationId) {
+    if (myChart && myChart.options.annotation.annotations.length > 0) {
+        const annotationIndex = myChart.options.annotation.annotations.findIndex(
+            annotation => annotation.id === annotationId
+        );
+
+        if (annotationIndex !== -1) {
+            const removedAnnotation = myChart.options.annotation.annotations.splice(annotationIndex, 1);
+            console.log('Removed annotation:', removedAnnotation);
+
+            // Optionally update filterArr to reflect the removal
+            filterArr.splice(annotationIndex, 1);
+
+            myChart.update();
+        } else {
+            console.warn('Annotation not found:', annotationId);
+        }
+    } else {
+        console.warn('No annotations to delete.');
+    }
+}

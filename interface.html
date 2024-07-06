@@ -13,6 +13,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.3/dist/chartjs-plugin-dragdata.min.js" defer></script> -->
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" defer></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.js"></script>
 
 
 </head>
@@ -22,7 +24,7 @@
     <body onpageshow="refreshOnBack(event)"></body>
     <div class="main-container">
         <div class="file-upload-row">
-            <h1>Upload music file/files</h1>
+            <h1>Upload music/csv file/files</h1>
             <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
             <button id="showChartButton">Upload</button>
             <div id="fileNames"></div>
@@ -31,8 +33,21 @@
             </select>
             <button id="reset">Reset Zoom</button>
             <button id="saveCsvButton">Save CSV</button>
+            <label for="annotationXValue">Add Annotation at X (seconds):</label>
+            <input type="number" id="annotationXValue" step="0.01">
+            <button id="addAnnotationButton">Add Annotation</button>
+            <label for="deleteToggle">Delete Annotation</label>
+            <input type="checkbox" id="deleteToggle">
+            <label for="showSpectrogram">Show Spectrogram</label>
+            <input type="checkbox" id="showSpectrogram">
         </div>
-        <canvas id="chartContainer" class="chart-container"></canvas>
+        <div class="chart-section">
+            <canvas id="chartContainer" class="chart-container"></canvas>
+            <div id="p5SketchContainer" class="chart-container" style="display: none;"></div>
+            <audio id="audioPlayer" controls style="display: none;">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
     </div>
 
     <script src="script.js"></script>
