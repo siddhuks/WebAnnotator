@@ -38,8 +38,9 @@ function addAnnotation(xValue) {
             borderColor: 'blue', // Different color to distinguish new annotations
             borderWidth: 2,
         };
+
         myChart.options.annotation.annotations.push(annotation);
-        filterArr.push(xValue); // Update filterArr with the new annotation value
+        //filterArr.push(xValue); // Update filterArr with the new annotation value
         myChart.update();
     } else {
         console.warn('Invalid x value for annotation:', xValue);
@@ -109,28 +110,79 @@ audioElement.addEventListener('seeked', () => {
     }
 });
 
-
 // Function to display the precomputed spectrogram
 async function displayPrecomputedSpectrogram(fileIndex) {
     p5SketchContainer.innerHTML = ''; // Clear previous content if any
-    try {
-        const generatedFileName = await generateAndSaveSpectrogram(fileIndex);
-        const spectrogramImage = new Image();
-        const filePath = `http://127.0.0.1:9000/${generatedFileName}`;
-        console.log('Attempting to load spectrogram image from:', filePath);
-        spectrogramImage.src = filePath;
-        spectrogramImage.onload = function() {
-            p5SketchContainer.innerHTML = ''; // Clear previous content if any
-            p5SketchContainer.appendChild(spectrogramImage);
-        };
-        spectrogramImage.onerror = function() {
-            console.error('Error loading spectrogram image:', spectrogramImage.src);
-            p5SketchContainer.innerHTML = `<p>Could not load spectrogram image at ${spectrogramImage.src}.</p>`;
-        };
-    } catch (error) {
-        console.error('Error in generating or displaying spectrogram:', error);
+    const file = files[fileIndex];
+    if (file.type === 'audio/wav' || file.type === 'audio/mp3') {
+        try {
+            const generatedFileName = await generateAndSaveSpectrogram(fileIndex);
+            const spectrogramImage = new Image();
+            const filePath = `http://127.0.0.1:9000/${generatedFileName}`;
+            console.log('Attempting to load spectrogram image from:', filePath);
+            spectrogramImage.src = filePath;
+            spectrogramImage.onload = function() {
+                p5SketchContainer.innerHTML = ''; // Clear previous content if any
+                p5SketchContainer.appendChild(spectrogramImage);
+            };
+            spectrogramImage.onerror = function() {
+                console.error('Error loading spectrogram image:', spectrogramImage.src);
+                p5SketchContainer.innerHTML = `<p>Could not load spectrogram image at ${spectrogramImage.src}.</p>`;
+            };
+        } catch (error) {
+            console.error('Error in generating or displaying spectrogram:', error);
+        }
     }
 }
+
+audioElement.addEventListener('timeupdate', () => {
+    if (myChart) {
+        console.log("!!!!!!!!!!!")
+        const currentTime = audioElement.currentTime;
+        const newAnnotation = {
+            type: 'line',
+            mode: 'vertical',
+            scaleID: 'x-axis-0',
+            value: currentTime,
+            borderColor: 'blue', // Different color to distinguish new annotations
+            borderWidth: 2,
+        };
+
+        // Remove the previous annotation if it exists
+        if (myChart.options.annotation.annotations.length > 0) {
+            myChart.options.annotation.annotations.pop();
+        }
+
+        // Add the new annotation
+        myChart.options.annotation.annotations.push(newAnnotation);
+        console.log("currentTime: ", currentTime);
+        myChart.update(); // Update the chart without animation
+    }
+});
+
+
+
+
+// Synchronize annotations with audio playback
+// audioElement.addEventListener('timeupdate', () => {
+//     if (myChart) {
+//         const currentTime = audioElement.currentTime;
+//         // Remove any existing playhead annotation
+//         myChart.options.annotation.annotations = myChart.options.annotation.annotations.filter(annotation => annotation.id !== 'playhead');
+//         // Add a new playhead annotation
+//         myChart.options.annotation.annotations.push({
+//             id: 'playhead',
+//             type: 'line',
+//             mode: 'vertical',
+//             scaleID: 'x-axis-0',
+//             value: currentTime,
+//             borderColor: 'blue',
+//             borderWidth: 2,
+//         });
+//         console.log("currentTime: ", currentTime)
+//         myChart.update();
+//     }
+// });
 
 
 async function generateAndSaveSpectrogram(fileIndex) {
@@ -157,16 +209,49 @@ async function generateAndSaveSpectrogram(fileIndex) {
     }
 }
 
+// Function to show message for CSV files when Show Spectrogram is checked
+function showNoSpectrogramMessage() {
+    const spectrogramMessageContainer = document.getElementById('spectrogramMessageContainer');
+    console.log("spectrogramMessageContainer", spectrogramMessageContainer)
+    if (spectrogramMessageContainer) {
+        spectrogramMessageContainer.innerHTML = 'No spectrogram for CSV files.';
+        spectrogramMessageContainer.style.display = 'block';
+    } else {
+        console.warn("spectrogramMessageContainer not found.");
+    }
+}
+
+function hideNoSpectrogramMessage() {
+    const spectrogramMessageContainer = document.getElementById('spectrogramMessageContainer');
+    if (spectrogramMessageContainer) {
+        spectrogramMessageContainer.style.display = 'none';
+    }
+}
+
+
 document.getElementById('showSpectrogram').addEventListener('change', function() {
+    const selectedFileIndex = document.getElementById('fileSelector').value;
     if (this.checked) {
         p5SketchContainer.style.display = 'block';
         if (audioBuffers.length > 0) {
-            // const fileName = files[0].name.replace(/\.[^/.]+$/, ".png");
-            // console.log("showSpectrogram: ", fileName)
-            displayPrecomputedSpectrogram(0);
+            console.log("----------------", selectedFileIndex)
+            displayPrecomputedSpectrogram(selectedFileIndex);
         }
     } else {
         p5SketchContainer.style.display = 'none';
+    }
+
+    if (files[selectedFileIndex] && (files[selectedFileIndex].type === 'text/csv' || files[selectedFileIndex].name.endsWith('.csv'))) {
+        if (this.checked) {
+            console.log("CSV file selected and spectrogram checkbox is checked.");
+            showNoSpectrogramMessage();
+        } else {
+            console.log("Spectrogram checkbox is unchecked.");
+            hideNoSpectrogramMessage();
+        }
+    } else {
+        console.log("Non-CSV file or no file selected.");
+        hideNoSpectrogramMessage();
     }
 });
 
@@ -264,7 +349,7 @@ function analyzeAmplitude(audioBuffer) {
 
         x += sliceWidth;
         x = i * interval;
-        console.log("1c", x, y)
+        // console.log("1c", x, y)
 
         xArray.push(x)
         yArray.push(y)
@@ -324,9 +409,10 @@ async function initializeChart(file) {
     filterArr = arr1;
     //console.log("IC:, isCSV ", arr1, isCSV);
     filterArr = filterArr.filter(value => value !== null);
-    if (!isCSV) {
+    filterArr = getRandomSubarray(xArray, 10);
+    if (!isCSV && (file.type === 'audio/wav' || file.type === 'audio/mp3')) {
 
-        filterArr = getRandomSubarray(xArray, 10);
+
         const formData = new FormData();
         formData.append('file', file);
         formData.append('description', 'best'); // Assuming you want to include this based on your Python code
@@ -347,11 +433,12 @@ async function initializeChart(file) {
         } catch (error) {
             console.error('Error uploading file:', error);
         }
+        filterArr = onsets;
     }
 
     // filterArr.sort((a, b) => a - b);
     //console.log('getRandomSubarray: ', filterArr);
-    filterArr = onsets; // Comment this along with api call to get random arrays
+    // Comment this along with api call to get random arrays
     const annotations = filterArr.map((xValue) => {
         //console.log('filterArr, xValue: ', filterArr, xValue)
         //console.log('dataPoints: ', dataPoints)
@@ -597,8 +684,12 @@ function setUpEventListeners() {
 
 // Event listener for the dropdown selection change
 document.getElementById('fileSelector').addEventListener('change', function() {
+    if (myChart) {
+        myChart.destroy();
+    }
     const selectedFileIndex = parseInt(this.value, 10);
     if (files[selectedFileIndex].type.startsWith('audio/')) {
+        hideNoSpectrogramMessage();
         clearCurrentAudio();
         initializeAudioPlayer(files[selectedFileIndex]);
     }
@@ -608,7 +699,15 @@ document.getElementById('fileSelector').addEventListener('change', function() {
     if (document.getElementById('showSpectrogram').checked) {
         // const fileName = files[selectedFileIndex].name.replace(/\.[^/.]+$/, ".png");
         // console.log("fileSelector: ", fileName)
+        console.log("+++++++++++++++++")
         displayPrecomputedSpectrogram(selectedFileIndex);
+    }
+
+    if (files[selectedFileIndex].type === 'text/csv' || files[selectedFileIndex].name.endsWith('.csv')) {
+        if (document.getElementById('showSpectrogram').checked) {
+            console.log("CSV file selected and spectrogram checkbox is checked on file selection.");
+            showNoSpectrogramMessage();
+        }
     }
 });
 
@@ -622,6 +721,11 @@ document.getElementById('fileInput').addEventListener('change', function() {
     files = this.files; // Update the global `files` variable with the newly selected files
     const fileSelector = document.getElementById('fileSelector');
     fileSelector.innerHTML = ''; // Clear existing options
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    hideNoSpectrogramMessage();
 
     for (let i = 0; i < files.length; i++) {
         const option = document.createElement('option');
@@ -634,7 +738,16 @@ document.getElementById('fileInput').addEventListener('change', function() {
             clearCurrentAudio();
             initializeAudioPlayer(files[0]);
         }
+
+        if (files[i].type === 'text/csv' || files[i].name.endsWith('.csv')) {
+            if (document.getElementById('showSpectrogram').checked) {
+                console.log("klm")
+                showNoSpectrogramMessage();
+            }
+        }
     }
+
+
 });
 
 function clearCurrentAudio() {

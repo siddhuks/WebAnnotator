@@ -24,7 +24,7 @@
     <body onpageshow="refreshOnBack(event)"></body>
     <div class="main-container">
         <div class="file-upload-row">
-            <h1>Upload music/csv file/files</h1>
+            <h1>Upload music/csv files</h1>
             <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
             <button id="showChartButton">Upload</button>
             <div id="fileNames"></div>
@@ -42,8 +42,13 @@
             <input type="checkbox" id="showSpectrogram">
         </div>
         <div class="chart-section">
-            <canvas id="chartContainer" class="chart-container"></canvas>
-            <div id="p5SketchContainer" class="chart-container" style="display: none;"></div>
+            <div id="spectrogramMessageContainer" style="color:red;"></div>
+            <canvas id="chartContainer" class="chart-container">
+                <!-- <div class="spinner" id="chartSpinner"></div> -->
+            </canvas>
+            <div id="p5SketchContainer" class="chart-container" style="display: none">
+                <!-- <div class="spinner" id="p5Spinner"></div> -->
+            </div>
             <audio id="audioPlayer" controls style="display: none;">
                 Your browser does not support the audio element.
             </audio>
