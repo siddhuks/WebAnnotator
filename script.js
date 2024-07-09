@@ -6,6 +6,8 @@ const canvas = chartContainer;
 const ctx = document.getElementById('chartContainer').getContext('2d');
 const p5SketchContainer = document.getElementById('p5SketchContainer');
 const bufferLength = analyser.frequencyBinCount;
+const chartSpinner = document.getElementById('chartSpinner');
+const p5Spinner = document.getElementById('p5Spinner');
 let data = [];
 let myChart;
 let arr1 = [];
@@ -53,6 +55,15 @@ let audioElement = document.getElementById('audioPlayer');
 let currentAudioBuffer = null;
 let sourceNode = null;
 
+function showSpinner(spinner) {
+    spinner.style.display = 'block';
+    console.log("Spinner---------", spinner)
+}
+
+function hideSpinner(spinner) {
+    spinner.style.display = 'none';
+}
+
 function initializeAudioPlayer(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -65,7 +76,6 @@ function initializeAudioPlayer(file) {
 
 // Function to handle audio processing and visualization
 function processAndVisualize(arrayBuffer, fileIndex) {
-
     audioContext.decodeAudioData(arrayBuffer)
         .then(audioBuffer => {
             analyzeAmplitude(audioBuffer);
@@ -83,7 +93,8 @@ function processAndVisualize(arrayBuffer, fileIndex) {
         })
         .catch(error => {
             console.error('Error decoding audio:', error);
-        });
+        })
+
 }
 
 // Add event listeners to the audio player for play, pause, and seek actions
@@ -122,9 +133,10 @@ async function displayPrecomputedSpectrogram(fileIndex) {
         p5SketchContainer.style.display = 'block';
     }
     if (file.type === 'audio/wav' || file.type === 'audio/mpeg') {
-
+        showSpinner(p5Spinner);
         try {
             console.log("file: ", file)
+
             const generatedFileName = await generateAndSaveSpectrogram(fileIndex);
             const spectrogramImage = new Image();
             const filePath = `http://127.0.0.1:9000/${generatedFileName}`;
@@ -134,13 +146,16 @@ async function displayPrecomputedSpectrogram(fileIndex) {
                 p5SketchContainer.innerHTML = ''; // Clear previous content if any
                 p5SketchContainer.appendChild(spectrogramImage);
             };
+
             spectrogramImage.onerror = function() {
                 console.error('Error loading spectrogram image:', spectrogramImage.src);
                 p5SketchContainer.innerHTML = `<p>Could not load spectrogram image at ${spectrogramImage.src}.</p>`;
             };
         } catch (error) {
+            hideSpinner(p5Spinner);
             console.error('Error in generating or displaying spectrogram:', error);
         }
+        hideSpinner(p5Spinner);
     }
 }
 
@@ -182,6 +197,7 @@ async function generateAndSaveSpectrogram(fileIndex) {
         });
         const data = await response.json();
         console.log("data: ", data)
+
         if (data.success) {
             return data.image_path.split('/').pop(); // Return the file name from the path
         } else {
@@ -397,8 +413,7 @@ async function initializeChart(file) {
     filterArr = filterArr.filter(value => value !== null);
     filterArr = getRandomSubarray(xArray, 10);
     if (!isCSV && (file.type === 'audio/wav' || file.type === 'audio/mp3')) {
-
-
+        showSpinner(chartSpinner);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('description', 'best'); // Assuming you want to include this based on your Python code
@@ -416,9 +431,12 @@ async function initializeChart(file) {
             onsets = result.notes.onsets;
             console.log("api call: ", result.notes.onsets)
 
+
         } catch (error) {
+            hideSpinner(chartSpinner);
             console.error('Error uploading file:', error);
         }
+        hideSpinner(chartSpinner);
         filterArr = onsets;
     }
 
@@ -501,9 +519,22 @@ async function initializeChart(file) {
                         wheel: {
                             enabled: true, // Enables zooming using the mouse wheel
                         },
-                        // pinch: {
-                        //     enabled: true // Enables zooming using pinch gestures on touch devices
-                        // }
+                        pinch: {
+                            enabled: true // Enables zooming using pinch gestures on touch devices
+                        },
+                        onZoomComplete: function({ chart }) {
+                            const zoomLevel = chart.scales['x-axis-0'].max - chart.scales['x-axis-0'].min;
+                            const totalDataLength = xArray[xArray.length - 1] - xArray[0];
+                            const container = document.getElementById('chartContainer');
+                            console.log("container: ", container)
+                            if (zoomLevel < totalDataLength) {
+                                container.style.overflowX = 'auto';
+                                console.log("container1: ", container)
+                            } else {
+                                container.style.overflowX = 'hidden';
+                                console.log("container2: ", container)
+                            }
+                        },
                     },
                     // Enables panning
                     // pan: {
@@ -583,6 +614,16 @@ function getClosestLineIndex(myChart, mouseX) {
 //         console.log('Removed annotation at index:', closestIndex);
 //     }
 // }
+
+document.getElementById('deleteToggle').addEventListener('change', function() {
+    const deleteAnnotationMessageContainer = document.getElementById('deleteAnnotationMessageContainer');
+    if (this.checked) {
+        deleteAnnotationMessageContainer.innerHTML = 'Double click on annotation to delete.';
+        deleteAnnotationMessageContainer.style.display = 'block';
+    } else {
+        deleteAnnotationMessageContainer.style.display = 'none';
+    }
+});
 
 
 function deleteClosestAnnotation(myChart, event) {
@@ -776,6 +817,7 @@ document.getElementById('showChartButton').addEventListener('click', function() 
                 // Process as audio file
                 const reader = new FileReader();
                 reader.onload = function(e) {
+                    console.log("Spinner: ", chartSpinner)
                     processAndVisualize(e.target.result, i); // Process each audio file
                 };
                 reader.readAsArrayBuffer(files[i]);
@@ -786,6 +828,7 @@ document.getElementById('showChartButton').addEventListener('click', function() 
 
 document.getElementById('reset').addEventListener('click', function() {
     myChart.resetZoom();
+    // document.getElementById('chartContainer').style.overflowX = 'hidden';
 });
 
 document.getElementById('saveCsvButton').addEventListener('click', function() {

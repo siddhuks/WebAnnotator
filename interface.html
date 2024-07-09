@@ -24,31 +24,33 @@
     <body onpageshow="refreshOnBack(event)"></body>
     <div class="main-container">
         <div class="file-upload-row">
-            <h1>Upload music/csv files</h1>
-            <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
-            <button id="showChartButton">Upload</button>
-            <div id="fileNames"></div>
-            <select id="fileSelector"></select>
-            <option value="0"></option>
-            </select>
-            <button id="reset">Reset Zoom</button>
-            <button id="saveCsvButton">Save CSV</button>
-            <label for="annotationXValue">Add Annotation at X (seconds):</label>
-            <input type="number" id="annotationXValue" step="0.01">
-            <button id="addAnnotationButton">Add Annotation</button>
-            <label for="deleteToggle">Delete Annotation</label>
-            <input type="checkbox" id="deleteToggle">
-            <label for="showSpectrogram">Show Spectrogram</label>
-            <input type="checkbox" id="showSpectrogram">
+            <div class="file-upload-controls">
+                <label for="fileInput">Upload file/s:</label>
+                <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
+                <button id="showChartButton">Upload</button>
+                <button id="reset">Reset Zoom</button>
+                <button id="saveCsvButton">Save CSV</button>
+                <select id="fileSelector"></select>
+            </div>
+            <div class="annotations-controls">
+                <label for="annotationXValue">Annotation X (s):</label>
+                <input type="number" id="annotationXValue" step="0.01">
+                <button id="addAnnotationButton">Add</button>
+                <label for="deleteToggle">Delete</label>
+                <input type="checkbox" id="deleteToggle">
+                <label for="showSpectrogram">Spectrogram</label>
+                <input type="checkbox" id="showSpectrogram">
+            </div>
         </div>
         <div class="chart-section">
             <div id="spectrogramMessageContainer" style="color:red;"></div>
+            <div id="deleteAnnotationMessageContainer" style="color:red; display:none;"></div>
             <canvas id="chartContainer" class="chart-container">
-                <!-- <div class="spinner" id="chartSpinner"></div> -->
             </canvas>
+            <div class="spinner" id="chartSpinner" style="display: none"></div>
             <div id="p5SketchContainer" class="chart-container" style="display: none">
-                <!-- <div class="spinner" id="p5Spinner"></div> -->
             </div>
+            <div class="spinner" id="p5Spinner" style="display: none"></div>
             <audio id="audioPlayer" controls style="display: none;">
                 Your browser does not support the audio element.
             </audio>
