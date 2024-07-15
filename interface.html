@@ -15,6 +15,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
 
 </head>
@@ -25,7 +26,7 @@
     <div class="main-container">
         <div class="file-upload-row">
             <div class="file-upload-controls">
-                <label for="fileInput">Upload file/s:</label>
+                <label id="upload" for="fileInput">Upload file/s:</label>
                 <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
                 <button id="showChartButton">Upload</button>
                 <button id="reset">Reset Zoom</button>
@@ -35,18 +36,29 @@
             <div class="annotations-controls">
                 <label for="annotationXValue">Annotation X (s):</label>
                 <input type="number" id="annotationXValue" step="0.01">
+                <label for="annotationType">Type:</label>
+                <select id="annotationType">
+                    <option value="onset">Onset</option>
+                    <option value="offset">Offset</option>
+                    <option value="both">Same</option>
+                </select>
                 <button id="addAnnotationButton">Add</button>
                 <label for="deleteToggle">Delete</label>
                 <input type="checkbox" id="deleteToggle">
                 <label for="showSpectrogram">Spectrogram</label>
                 <input type="checkbox" id="showSpectrogram">
+                <label for="panToggle">Pan</label>
+                <input type="checkbox" id="panToggle">
             </div>
         </div>
         <div class="chart-section">
             <div id="spectrogramMessageContainer" style="color:red;"></div>
             <div id="deleteAnnotationMessageContainer" style="color:red; display:none;"></div>
+            <div id="error-message"></div>
             <canvas id="chartContainer" class="chart-container">
+                
             </canvas>
+
             <div class="spinner" id="chartSpinner" style="display: none"></div>
             <div id="p5SketchContainer" class="chart-container" style="display: none">
             </div>
