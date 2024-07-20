@@ -1,0 +1,32 @@
+{
+  "name": "webannonatortool",
+  "version": "1.0.0",
+  "description": "A project for uploading and annotating audio files.",
+  "main": "script.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siddhuks/WebAnnotator.git"
+  },
+  "keywords": [
+    "audio",
+    "upload",
+    "annotation"
+  ],
+  "author": "Siddhartha K S",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/siddhuks/WebAnnotator/issues"
+  },
+  "homepage": "https://github.com/siddhuks/WebAnnotator#readme",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^24.1.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.3"
+  }
+}

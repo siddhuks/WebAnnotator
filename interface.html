@@ -5,13 +5,8 @@
     <title>Music File Upload</title>
     <link rel="stylesheet" type="text/css" href="style.css">
     <script type="text/javascript" src="https://cdn.canvasjs.com/canvasjs.min.js" defer></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/0.7.7/chartjs-plugin-zoom.min.js" defer></script>
-
-    <!-- <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@latest" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.3/dist/chartjs-plugin-dragdata.min.js" defer></script> -->
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js" defer></script> -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/0.5.7/chartjs-plugin-annotation.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/addons/p5.sound.js"></script>
@@ -30,7 +25,7 @@
                 <input type="file" id="fileInput" accept="audio/*,.csv" multiple />
                 <button id="showChartButton">Upload</button>
                 <button id="reset">Reset Zoom</button>
-                <button id="saveCsvButton">Save CSV</button>
+                <button id="saveCsvButton">Save as CSV</button>
                 <select id="fileSelector"></select>
             </div>
             <div class="annotations-controls">
@@ -40,7 +35,7 @@
                 <select id="annotationType">
                     <option value="onset">Onset</option>
                     <option value="offset">Offset</option>
-                    <option value="both">Same</option>
+                    <option value="both">Both</option>
                 </select>
                 <button id="addAnnotationButton">Add</button>
                 <label for="deleteToggle">Delete</label>
@@ -52,6 +47,7 @@
             </div>
         </div>
         <div class="chart-section">
+            <div id="panMessageContainer" style="color:red; display:none;">Click and drag to pan across</div>
             <div id="spectrogramMessageContainer" style="color:red;"></div>
             <div id="deleteAnnotationMessageContainer" style="color:red; display:none;"></div>
             <div id="error-message"></div>

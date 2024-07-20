@@ -81,7 +81,6 @@ function addAnnotation(xValue, annotationType) {
     }
 }
 
-
 // Add these variables at the top of the script
 let audioElement = document.getElementById('audioPlayer');
 let currentAudioBuffer = null;
@@ -89,7 +88,6 @@ let sourceNode = null;
 
 function showSpinner(spinner) {
     spinner.style.display = 'block';
-    console.log("Spinner---------", spinner)
 }
 
 function hideSpinner(spinner) {
@@ -119,7 +117,6 @@ function initializeAudioPlayer(file) {
 
 // Function to handle audio processing and visualization
 function processAndVisualize(arrayBuffer, fileIndex) {
-    console.log("arraybuffer: ", arrayBuffer)
     audioContext.decodeAudioData(arrayBuffer)
         .then(audioBuffer => {
             analyzeAmplitude(audioBuffer);
@@ -130,7 +127,6 @@ function processAndVisualize(arrayBuffer, fileIndex) {
 
             if (document.getElementById('showSpectrogram').checked) {
                 p5SketchContainer.style.display = 'block';
-                console.log(".......................................")
                 displayPrecomputedSpectrogram(fileIndex);
             }
 
@@ -171,19 +167,15 @@ async function displayPrecomputedSpectrogram(fileIndex) {
     hideErrorMessage();
     const file = files[fileIndex];
     const supportedAudioFormats = ['audio/wav', 'audio/mpeg', 'audio/flac', 'audio/ogg'];
-    console.log("filetype: ", file.type)
     const selectedFileIndex = document.getElementById('fileSelector').value;
-    console.log("check : ", files[selectedFileIndex].type)
     if (files[selectedFileIndex].type === 'text/csv') {
         p5SketchContainer.style.display = 'none';
     } else {
         p5SketchContainer.style.display = 'block';
     }
-    console.log(" file.type: ", file.type)
     if (supportedAudioFormats.includes(file.type)) {
         showSpinner(p5Spinner);
         try {
-            console.log("file: ", file)
 
             const generatedFileName = await generateAndSaveSpectrogram(fileIndex);
             const spectrogramImage = new Image();
@@ -212,7 +204,6 @@ async function displayPrecomputedSpectrogram(fileIndex) {
 
 audioElement.addEventListener('timeupdate', () => {
     if (myChart) {
-        console.log("!!!!!!!!!!!")
         const currentTime = audioElement.currentTime;
         const newAnnotation = {
             type: 'line',
@@ -230,7 +221,6 @@ audioElement.addEventListener('timeupdate', () => {
 
         // Add the new annotation
         myChart.options.annotation.annotations.push(newAnnotation);
-        console.log("currentTime: ", currentTime);
         myChart.update(); // Update the chart without animation
     }
 });
@@ -247,7 +237,6 @@ async function generateAndSaveSpectrogram(fileIndex) {
             body: formData
         });
         const data = await response.json();
-        console.log("data: ", data)
 
         if (data.success) {
             return data.image_path.split('/').pop(); // Return the file name from the path
@@ -264,7 +253,6 @@ async function generateAndSaveSpectrogram(fileIndex) {
 // Function to show message for CSV files when Show Spectrogram is checked
 function showNoSpectrogramMessage() {
     const spectrogramMessageContainer = document.getElementById('spectrogramMessageContainer');
-    console.log("spectrogramMessageContainer", spectrogramMessageContainer)
     if (spectrogramMessageContainer) {
         spectrogramMessageContainer.innerHTML = 'No spectrogram for CSV files.';
         spectrogramMessageContainer.style.display = 'block';
@@ -287,7 +275,6 @@ document.getElementById('showSpectrogram').addEventListener('change', function()
 
         if (audioBuffers.length > 0) {
             p5SketchContainer.style.display = 'block';
-            console.log("----------------", selectedFileIndex)
             displayPrecomputedSpectrogram(selectedFileIndex);
         }
     } else {
@@ -297,14 +284,11 @@ document.getElementById('showSpectrogram').addEventListener('change', function()
 
     if (files[selectedFileIndex] && (files[selectedFileIndex].type === 'text/csv' || files[selectedFileIndex].name.endsWith('.csv'))) {
         if (this.checked) {
-            console.log("CSV file selected and spectrogram checkbox is checked.");
             showNoSpectrogramMessage();
         } else {
-            console.log("Spectrogram checkbox is unchecked.");
             hideNoSpectrogramMessage();
         }
     } else {
-        console.log("Non-CSV file or no file selected.");
         hideNoSpectrogramMessage();
     }
 });
@@ -318,17 +302,10 @@ function processCsvFile(file) {
         const [xArr, yArr, array1, array2] = parseCsvContent(content); // Implement this function based on your CSV format
         // Use xArray and yArray to update the chart data
         dataPoints = xArr.map((x, index) => ({ x, y: yArr[index] }));
-        //console.log("psf dataPoints", dataPoints)
-        //console.log("psf arr", arr)
         xArray = xArr
         yArray = yArr
         arr1 = array1
         filterArr2 = array2
-        console.log("psf filterArr2: ", filterArr2)
-            // if (index == 0) {
-            //     updateChart(index);
-            // }
-            // Optionally use arr1 to position vertical lines
         isCSV = true;
         initializeChart(file); // You may need to adjust this function to accept data
     };
@@ -354,14 +331,12 @@ function parseCsvContent(content) {
 
 
 
-function saveArraysAsCsv(xArray, yArray, filterArr, filterArr2) {
+function saveArraysAsCsv(xArray, yArray, filterArr, filterArr2, fileName) {
     filterArr = []; // Clear the filterArr
     filterArr2 = []; // Clear the filterArr2
 
     // Iterate through annotations and populate filterArr and filterArr2 based on their types
     myChart.options.annotation.annotations.forEach((annotation, index) => {
-        console.log("annotation: ",
-            annotation, " index: ", index)
         const xValue = annotation.value;
         // const annotationType = annotationTypes[index];
 
@@ -373,8 +348,6 @@ function saveArraysAsCsv(xArray, yArray, filterArr, filterArr2) {
             filterArr.push(xValue);
             filterArr2.push(xValue);
         }
-        console.log(" filterArr: ", filterArr)
-        console.log(" filterArr2: ", filterArr2)
     });
 
     // Start with the column headers
@@ -395,7 +368,7 @@ function saveArraysAsCsv(xArray, yArray, filterArr, filterArr2) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "audio_data.csv"); // Specify the file name
+    link.setAttribute("download", fileName); // Specify the file name
     document.body.appendChild(link); // Required for FF
     link.click(); // Trigger the download
     document.body.removeChild(link); // Clean up
@@ -442,7 +415,6 @@ function analyzeAmplitude(audioBuffer) {
             x: x,
             y: y
         });
-        //console.log("1d", xArray, yArray)
     }
 
     var dataSeries = {
@@ -478,19 +450,6 @@ function updateChart(fileIndex) {
     }
 }
 
-function getRandomSubarray(arr, size) {
-    let shuffled = arr.slice(0),
-        i = arr.length,
-        temp, index;
-    while (i--) {
-        index = Math.floor((i + 1) * Math.random());
-        temp = shuffled[i];
-        shuffled[i] = shuffled[index];
-        shuffled[index] = temp;
-    }
-    return shuffled.slice(0, size);
-}
-
 // Function to extract onsets and offsets
 function extractOnsetsAndOffsets(musicData) {
     let onsets = [];
@@ -510,6 +469,12 @@ function updatePanState() {
     if (myChart && myChart.options.plugins.zoom) {
         myChart.options.pan.enabled = panToggle.checked;
         console.log("panToggle.checked: ", panToggle.checked)
+
+        if (panToggle.checked) {
+            panMessageContainer.style.display = 'block';
+        } else {
+            panMessageContainer.style.display = 'none';
+        }
         myChart.update();
     }
 }
@@ -528,13 +493,6 @@ async function initializeChart(file) {
 
     const supportedAudioFormats = ['audio/wav', 'audio/mpeg', 'audio/flac', 'audio/ogg'];
 
-    // Ensure filterArr and filterColor are of the same length
-    // if (filterArr.length > filterColor.length) {
-    //     filterArr = filterArr.slice(0, filterColor.length);
-    // } else if (filterColor.length > filterArr.length) {
-    //     filterColor = filterColor.slice(0, filterArr.length);
-    // }
-    // filterArr = getRandomSubarray(xArray, 10);
     console.log(" filetype: ", file.type)
     if (supportedAudioFormats.includes(file.type)) {
         showSpinner(chartSpinner);
@@ -580,26 +538,6 @@ async function initializeChart(file) {
         filterArr2 = offset_data;
 
 
-        // filterArr.sort((a, b) => a - b);
-        //console.log('getRandomSubarray: ', filterArr);
-        // Comment this along with api call to get random arrays
-        // const annotations = filterArr.map((xValue) => {
-        //     //console.log('filterArr, xValue: ', filterArr, xValue)
-        //     //console.log('dataPoints: ', dataPoints)
-        //     return {
-        //         type: 'line',
-        //         mode: 'vertical',
-        //         scaleID: 'x-axis-0',
-        //         value: xValue,
-        //         // borderColor: `hsl(${(index * 30) % 360}, 100%, 50%)`,
-        //         // Color variation for visibility
-        //         borderColor: 'red',
-        //         borderWidth: 2,
-        //     };
-        // });
-
-
-
         const onsetAnnotations = (onset_data || []).map((xValue, index) => {
             console.log(`Onset Annotation ${index}: ${xValue}`);
             return {
@@ -627,22 +565,6 @@ async function initializeChart(file) {
         //const annotations = [...onsetAnnotations, ...offsetAnnotations];
         annotations = mergeAnnotations(onsetAnnotations, offsetAnnotations);
     } else {
-
-        console.log("xArray: ", xArray)
-
-        // annotations = filterArr.map((xValue, index) => {
-        //     const xColor = borderColors[index];
-        //     console.log("xvalue, bcolor: ", xValue, xColor);
-        //     return {
-        //         type: 'line',
-        //         mode: 'vertical',
-        //         scaleID: 'x-axis-0',
-        //         value: xValue,
-        //         borderColor: xColor,
-        //         borderWidth: 2,
-        //     };
-        // });
-
         const onsetAnnotations = (filterArr || []).map((xValue, index) => {
             console.log(`Onset Annotation ${index}: ${xValue}`);
             return {
@@ -668,9 +590,6 @@ async function initializeChart(file) {
         });
 
         annotations = mergeAnnotations(onsetAnnotations, offsetAnnotations);
-
-
-        console.log("annotations: ", annotations)
     }
 
 
@@ -802,17 +721,13 @@ let dragLineIndex = null; // Index of the line being dragged
 function getXValue(myChart, event) {
     const xAxis = myChart.scales['x-axis-0'];
     const pixelValue = event.offsetX;
-    //console.log("pixelValue", pixelValue)
-    //console.log("event", event)
     const xValue = xAxis.getValueForPixel(pixelValue);
-    //console.log("Xvalue", xValue)
-    // Return the precise value instead of rounding
+
     return xValue;
 }
 
 function getClosestLineIndex(myChart, mouseX) {
     const xAxis = myChart.scales['x-axis-0'];
-    //console.log("xAxis", xAxis)
     let closestIndex = -1;
     let closestDistance = Infinity;
 
@@ -830,34 +745,6 @@ function getClosestLineIndex(myChart, mouseX) {
 
     return closestIndex;
 }
-
-// Function to delete the closest annotation based on mouse position
-// function deleteClosestAnnotation(myChart, event) {
-//     const xAxis = myChart.scales['x-axis-0'];
-//     const mouseX = event.offsetX;
-//     const mouseXValue = xAxis.getValueForPixel(mouseX);
-
-//     let closestIndex = -1;
-//     let closestDistance = Infinity;
-
-//     myChart.options.annotation.annotations.forEach((annotation, index) => {
-//         if (annotation.type === "line" && annotation.mode === "vertical") {
-//             const distance = Math.abs(annotation.value - mouseXValue);
-//             if (distance < closestDistance) {
-//                 closestDistance = distance;
-//                 closestIndex = index;
-//             }
-//         }
-//     });
-
-//     if (closestIndex !== -1) {
-//         // Remove the annotation and update filterArr
-//         myChart.options.annotation.annotations.splice(closestIndex, 1);
-//         filterArr.splice(closestIndex, 1);
-//         myChart.update();
-//         console.log('Removed annotation at index:', closestIndex);
-//     }
-// }
 
 document.getElementById('deleteToggle').addEventListener('change', function() {
     const deleteAnnotationMessageContainer = document.getElementById('deleteAnnotationMessageContainer');
@@ -903,15 +790,6 @@ function deleteClosestAnnotation(myChart, event) {
 
 
 function setUpEventListeners() {
-
-    // const showSpectrogramCheckbox = document.getElementById('showSpectrogram');
-    // showSpectrogramCheckbox.addEventListener('change', () => {
-    //     if (showSpectrogramCheckbox.checked) {
-    //         p5SketchContainer.style.display = 'block';
-    //     } else {
-    //         p5SketchContainer.style.display = 'none';
-    //     }
-    // });
 
     // Set up the event listeners on the canvas
     canvas.addEventListener('mousedown', (event) => {
@@ -1023,10 +901,6 @@ document.getElementById('fileSelector').addEventListener('change', function() {
 });
 
 
-if (performance.navigation.type === performance.navigation.TYPE_BACK_FORWARD) {
-    window.location.reload();
-}
-
 
 document.getElementById('fileInput').addEventListener('change', function() {
     hideErrorMessage();
@@ -1103,6 +977,12 @@ document.getElementById('reset').addEventListener('click', function() {
 });
 
 document.getElementById('saveCsvButton').addEventListener('click', function() {
-    // const borderColors = myChart.options.annotation.annotations.map(annotation => annotation.borderColor);
-    saveArraysAsCsv(xArray, yArray, filterArr, filterArr2);
+    const selectedFileIndex = document.getElementById('fileSelector').value;
+    const selectedFile = files[selectedFileIndex];
+    // let fileName = 'audio_data.csv'; // Default name if no audio file is selected
+
+    if (selectedFile && selectedFile.type.startsWith('audio/')) {
+        fileName = selectedFile.name.replace(/\.[^/.]+$/, "") + ".csv"; // Replace audio file extension with .csv
+    }
+    saveArraysAsCsv(xArray, yArray, filterArr, filterArr2, fileName);
 });
